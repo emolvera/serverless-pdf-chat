@@ -34,12 +34,23 @@ def lambda_handler(event, context):
         region_name="us-east-1",
     )
 
+    # Modify inference parameters
+    # https://docs.anthropic.com/claude/reference/complete_post
+    inference_modifier = {
+        "max_tokens_to_sample":2048 # The maximum number of tokens to generate before stopping
+        #"temperature":0.5,
+        #"top_k":250,
+        #"top_p":1,
+        #"stop_sequences": ["\n\nHuman"]
+    }
+
     embeddings, llm = BedrockEmbeddings(
         model_id="amazon.titan-embed-text-v1",
         client=bedrock_runtime,
         region_name="us-east-1",
     ), Bedrock(
-        model_id="anthropic.claude-v2", client=bedrock_runtime, region_name="us-east-1"
+        model_id="anthropic.claude-v2", client=bedrock_runtime, region_name="us-east-1",
+        model_kwargs = inference_modifier   # Inference parameters
     )
     faiss_index = FAISS.load_local("/tmp", embeddings)
 
@@ -60,6 +71,7 @@ def lambda_handler(event, context):
         retriever=faiss_index.as_retriever(),
         memory=memory,
         return_source_documents=True,
+        max_tokens_limit=2048   # Maximum number of tokens to generate 
     )
 
     res = qa({"question": human_input})
